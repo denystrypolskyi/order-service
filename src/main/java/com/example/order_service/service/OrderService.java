@@ -1,33 +1,75 @@
 package com.example.order_service.service;
 
-import com.example.order_service.dto.OrderRequestDTO;
+import com.example.order_service.client.ProductClient;
+import com.example.order_service.dto.ProductDTO;
 import com.example.order_service.model.Order;
+import com.example.order_service.model.OrderItem;
 import com.example.order_service.repository.OrderRepository;
-import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import jakarta.transaction.Transactional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 public class OrderService {
 
     private final OrderRepository repository;
+    private final ProductClient productClient;
 
-    public OrderService(OrderRepository repository) {
+    public OrderService(OrderRepository repository, ProductClient productClient) {
         this.repository = repository;
-    }
-
-    public Order createOrder(OrderRequestDTO request) {
-        Order order = new Order();
-        order.setUserId(request.getUserId());
-        order.setStatus(request.getStatus());
-        order.setTotalAmount(request.getTotalAmount());
-        order.setCreatedAt(LocalDateTime.now());
-
-        return repository.save(order);
+        this.productClient = productClient;
     }
 
     public List<Order> getAllOrders() {
         return repository.findAll();
     }
+
+    @Transactional
+    public void deleteOrder(Long id) {
+        Order order = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found with id: " + id));
+
+        repository.delete(order);
+    }
+
+    @Transactional
+    public Order createOrder(Order order) {
+        BigDecimal totalSum = BigDecimal.ZERO;
+
+        for (OrderItem item : order.getItems()) {
+            ProductDTO product = productClient.getProductById(item.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Product not found: " + item.getProductId()));
+
+            if (product.getQuantity() < item.getQuantity()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Not enough stock for product: " + product.getName());
+            }
+
+            item.setPricePerUnit(product.getPrice());
+
+            BigDecimal itemTotal = item.getPricePerUnit().multiply(BigDecimal.valueOf(item.getQuantity()));
+            totalSum = totalSum.add(itemTotal);
+
+            item.setOrder(order);
+        }
+
+        if (order.getCreatedAt() == null) {
+            order.setCreatedAt(java.time.LocalDateTime.now());
+        }
+        if (order.getStatus() == null) {
+            order.setStatus("CREATED");
+        }
+
+        order.setTotalAmount(totalSum);
+
+        return repository.save(order);
+    }
+
 }

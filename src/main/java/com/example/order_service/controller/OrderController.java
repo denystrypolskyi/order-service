@@ -1,10 +1,7 @@
 package com.example.order_service.controller;
 
-import com.example.order_service.dto.OrderRequestDTO;
 import com.example.order_service.model.Order;
 import com.example.order_service.service.OrderService;
-
-import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,13 +18,21 @@ public class OrderController {
         this.service = service;
     }
 
-    @PostMapping
-    public ResponseEntity<Order> createOrder(@Valid @RequestBody OrderRequestDTO request) {
-        return ResponseEntity.ok(service.createOrder(request));
-    }
-
     @GetMapping
     public ResponseEntity<List<Order>> getAll() {
         return ResponseEntity.ok(service.getAllOrders());
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        service.deleteOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping
+    public ResponseEntity<Order> createOrder(@RequestBody Order request) {
+        Order savedOrder = service.createOrder(request);
+        return ResponseEntity.ok(savedOrder);
+    }
+
 }
