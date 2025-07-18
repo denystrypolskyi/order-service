@@ -1,7 +1,9 @@
 package com.example.order_service.service;
 
+import com.example.order_service.OrderNotificationSender;
 import com.example.order_service.client.ProductClient;
 import com.example.order_service.dto.ProductDTO;
+import com.example.order_service.dto.ProductDecrementRequest;
 import com.example.order_service.model.Order;
 import com.example.order_service.model.OrderItem;
 import com.example.order_service.repository.OrderRepository;
@@ -20,10 +22,13 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final ProductClient productClient;
+    private final OrderNotificationSender orderNotificationSender;
 
-    public OrderService(OrderRepository repository, ProductClient productClient) {
+    public OrderService(OrderRepository repository, ProductClient productClient,
+            OrderNotificationSender orderNotificationSender) {
         this.repository = repository;
         this.productClient = productClient;
+        this.orderNotificationSender = orderNotificationSender;
     }
 
     public List<Order> getAllOrders() {
@@ -69,7 +74,18 @@ public class OrderService {
 
         order.setTotalAmount(totalSum);
 
-        return repository.save(order);
-    }
+        // decrement product quantity
+        List<ProductDecrementRequest> decrementRequests = order.getItems().stream()
+                .map(item -> new ProductDecrementRequest(item.getProductId(), item.getQuantity()))
+                .toList();
+        productClient.decrementProductQuantities(decrementRequests);
 
+        // save order to db
+        Order savedOrder = repository.save(order);
+
+        // send notification
+        orderNotificationSender.sendOrderNotification("Новый заказ #" + order.getId() + " создан");
+
+        return savedOrder;
+    }
 }
