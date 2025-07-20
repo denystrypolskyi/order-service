@@ -3,7 +3,6 @@ package com.example.order_service.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -11,7 +10,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.order_service.OrderNotificationSender;
 import com.example.order_service.client.ProductClient;
-import com.example.order_service.client.UserClient;
 import com.example.order_service.dto.OrderCreateDTO;
 import com.example.order_service.dto.OrderNotificationDTO;
 import com.example.order_service.dto.ProductDTO;
@@ -29,14 +27,12 @@ public class OrderService {
     private final OrderRepository repository;
     private final ProductClient productClient;
     private final OrderNotificationSender orderNotificationSender;
-    private final UserClient userClient;
 
     public OrderService(OrderRepository repository, ProductClient productClient,
-            OrderNotificationSender orderNotificationSender, ObjectMapper objectMapper, UserClient userClient) {
+            OrderNotificationSender orderNotificationSender, ObjectMapper objectMapper) {
         this.repository = repository;
         this.productClient = productClient;
         this.orderNotificationSender = orderNotificationSender;
-        this.userClient = userClient;
     }
 
     public List<Order> getAllOrders() {
@@ -68,7 +64,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Order createOrder(OrderCreateDTO dto) {
+    public Order createOrder(OrderCreateDTO dto, String email) {
         Order order = mapToOrder(dto);
         BigDecimal totalSum = BigDecimal.ZERO;
 
@@ -99,16 +95,6 @@ public class OrderService {
                 .toList());
 
         Order savedOrder = repository.save(order);
-
-        String email = "";
-        if (email == null || email.isBlank()) {
-            try {
-                email = userClient.getUserEmailById(savedOrder.getUserId())
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
 
         if (email != null && !email.isBlank()) {
             try {

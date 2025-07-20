@@ -1,6 +1,7 @@
 package com.example.order_service.controller;
 
 import com.example.order_service.dto.OrderCreateDTO;
+import com.example.order_service.jwt.JwtUtil;
 import com.example.order_service.model.Order;
 import com.example.order_service.service.OrderService;
 
@@ -14,9 +15,11 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService service;
+    private final JwtUtil jwtUtil;
 
-    public OrderController(OrderService service) {
+    public OrderController(OrderService service, JwtUtil jwtUtil) {
         this.service = service;
+        this.jwtUtil = jwtUtil;
     }
 
     @GetMapping
@@ -31,9 +34,10 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody OrderCreateDTO request) {
-        Order savedOrder = service.createOrder(request);
-        return ResponseEntity.ok(savedOrder);
+    public ResponseEntity<Order> createOrder(@RequestBody OrderCreateDTO dto,
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        String email = jwtUtil.extractEmail(token);
+        return ResponseEntity.ok(service.createOrder(dto, email));
     }
-
 }
