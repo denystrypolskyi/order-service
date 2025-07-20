@@ -1,21 +1,27 @@
 package com.example.order_service.service;
 
-import com.example.order_service.OrderNotificationSender;
-import com.example.order_service.client.ProductClient;
-import com.example.order_service.dto.ProductDTO;
-import com.example.order_service.dto.ProductDecrementRequest;
-import com.example.order_service.model.Order;
-import com.example.order_service.model.OrderItem;
-import com.example.order_service.repository.OrderRepository;
-
-import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
-import java.util.List;
+import com.example.order_service.OrderNotificationSender;
+import com.example.order_service.client.ProductClient;
+import com.example.order_service.client.UserClient;
+import com.example.order_service.dto.OrderCreateDTO;
+import com.example.order_service.dto.OrderNotificationDTO;
+import com.example.order_service.dto.ProductDTO;
+import com.example.order_service.dto.ProductDecrementRequest;
+import com.example.order_service.model.Order;
+import com.example.order_service.model.OrderItem;
+import com.example.order_service.repository.OrderRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class OrderService {
@@ -23,12 +29,14 @@ public class OrderService {
     private final OrderRepository repository;
     private final ProductClient productClient;
     private final OrderNotificationSender orderNotificationSender;
+    private final UserClient userClient;
 
     public OrderService(OrderRepository repository, ProductClient productClient,
-            OrderNotificationSender orderNotificationSender) {
+            OrderNotificationSender orderNotificationSender, ObjectMapper objectMapper, UserClient userClient) {
         this.repository = repository;
         this.productClient = productClient;
         this.orderNotificationSender = orderNotificationSender;
+        this.userClient = userClient;
     }
 
     public List<Order> getAllOrders() {
@@ -43,8 +51,25 @@ public class OrderService {
         repository.delete(order);
     }
 
+    public Order mapToOrder(OrderCreateDTO dto) {
+        Order order = new Order();
+        order.setUserId(dto.getUserId());
+
+        List<OrderItem> items = dto.getItems().stream().map(itemDTO -> {
+            OrderItem item = new OrderItem();
+            item.setProductId(itemDTO.getProductId());
+            item.setQuantity(itemDTO.getQuantity());
+            item.setOrder(order);
+            return item;
+        }).toList();
+
+        order.setItems(items);
+        return order;
+    }
+
     @Transactional
-    public Order createOrder(Order order) {
+    public Order createOrder(OrderCreateDTO dto) {
+        Order order = mapToOrder(dto);
         BigDecimal totalSum = BigDecimal.ZERO;
 
         for (OrderItem item : order.getItems()) {
@@ -58,34 +83,42 @@ public class OrderService {
             }
 
             item.setPricePerUnit(product.getPrice());
+            item.setProductName(product.getName());
+            item.setDescription(product.getDescription());
 
             BigDecimal itemTotal = item.getPricePerUnit().multiply(BigDecimal.valueOf(item.getQuantity()));
             totalSum = totalSum.add(itemTotal);
-
-            item.setOrder(order);
         }
 
-        if (order.getCreatedAt() == null) {
-            order.setCreatedAt(java.time.LocalDateTime.now());
-        }
-        if (order.getStatus() == null) {
-            order.setStatus("CREATED");
-        }
-
+        order.setCreatedAt(LocalDateTime.now());
+        order.setStatus("CREATED");
         order.setTotalAmount(totalSum);
 
-        // decrement product quantity
-        List<ProductDecrementRequest> decrementRequests = order.getItems().stream()
-                .map(item -> new ProductDecrementRequest(item.getProductId(), item.getQuantity()))
-                .toList();
-        productClient.decrementProductQuantities(decrementRequests);
+        productClient.decrementProductQuantities(order.getItems().stream()
+                .map(i -> new ProductDecrementRequest(i.getProductId(), i.getQuantity()))
+                .toList());
 
-        // save order to db
         Order savedOrder = repository.save(order);
 
-        // send notification
-        orderNotificationSender.sendOrderNotification("Новый заказ #" + order.getId() + " создан");
+        String email = "";
+        if (email == null || email.isBlank()) {
+            try {
+                email = userClient.getUserEmailById(savedOrder.getUserId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (email != null && !email.isBlank()) {
+            try {
+                orderNotificationSender.sendOrderNotification(new OrderNotificationDTO(email, savedOrder));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         return savedOrder;
     }
+
 }

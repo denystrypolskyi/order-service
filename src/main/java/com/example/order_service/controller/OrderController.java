@@ -1,5 +1,6 @@
 package com.example.order_service.controller;
 
+import com.example.order_service.dto.OrderCreateDTO;
 import com.example.order_service.model.Order;
 import com.example.order_service.service.OrderService;
 
@@ -30,7 +31,7 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order request) {
+    public ResponseEntity<Order> createOrder(@RequestBody OrderCreateDTO request) {
         Order savedOrder = service.createOrder(request);
         return ResponseEntity.ok(savedOrder);
     }

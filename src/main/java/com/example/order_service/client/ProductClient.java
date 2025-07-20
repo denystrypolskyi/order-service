@@ -12,8 +12,6 @@ import org.springframework.web.client.RestTemplate;
 import com.example.order_service.dto.ProductDTO;
 import com.example.order_service.dto.ProductDecrementRequest;
 
-import jakarta.validation.Valid;
-
 @Service
 public class ProductClient {
 
