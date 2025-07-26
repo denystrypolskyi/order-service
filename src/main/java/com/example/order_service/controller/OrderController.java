@@ -5,6 +5,9 @@ import com.example.order_service.jwt.JwtUtil;
 import com.example.order_service.model.Order;
 import com.example.order_service.service.OrderService;
 
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,15 +15,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
+@RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService service;
     private final JwtUtil jwtUtil;
-
-    public OrderController(OrderService service, JwtUtil jwtUtil) {
-        this.service = service;
-        this.jwtUtil = jwtUtil;
-    }
 
     @GetMapping
     public ResponseEntity<List<Order>> getAll() {
@@ -34,7 +33,7 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody OrderCreateDTO dto,
+    public ResponseEntity<Order> createOrder(@Valid @RequestBody OrderCreateDTO dto,
             @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         String email = jwtUtil.extractEmail(token);

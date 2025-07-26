@@ -17,23 +17,18 @@ import com.example.order_service.dto.ProductDecrementRequest;
 import com.example.order_service.model.Order;
 import com.example.order_service.model.OrderItem;
 import com.example.order_service.repository.OrderRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository repository;
     private final ProductClient productClient;
     private final OrderNotificationSender orderNotificationSender;
-
-    public OrderService(OrderRepository repository, ProductClient productClient,
-            OrderNotificationSender orderNotificationSender, ObjectMapper objectMapper) {
-        this.repository = repository;
-        this.productClient = productClient;
-        this.orderNotificationSender = orderNotificationSender;
-    }
+    private final OrderLogService orderLogService;
 
     public List<Order> getAllOrders() {
         return repository.findAll();
@@ -70,10 +65,14 @@ public class OrderService {
 
         for (OrderItem item : order.getItems()) {
             ProductDTO product = productClient.getProductById(item.getProductId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                            "Product not found: " + item.getProductId()));
+                    .orElseThrow(() -> {
+                        orderLogService.logProductNotFound(item.getProductId());
+                        return new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Product not found: " + item.getProductId());
+                    });
 
             if (product.getQuantity() < item.getQuantity()) {
+                orderLogService.logOrderRejected(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Not enough stock for product: " + product.getName());
             }
@@ -96,15 +95,19 @@ public class OrderService {
 
         Order savedOrder = repository.save(order);
 
+        orderLogService.logOrderCreated(savedOrder.getId(), savedOrder.getTotalAmount(), savedOrder.getCreatedAt());
+
         if (email != null && !email.isBlank()) {
             try {
-                orderNotificationSender.sendOrderNotification(new OrderNotificationDTO(email, savedOrder));
+                orderNotificationSender.sendOrderNotification(new OrderNotificationDTO(email,
+                        savedOrder));
             } catch (Exception e) {
+                System.err.println("Failed to send order notification: " + e.getMessage());
                 e.printStackTrace();
             }
+
         }
 
         return savedOrder;
     }
-
 }
