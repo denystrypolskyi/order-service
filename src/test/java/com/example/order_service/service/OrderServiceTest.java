@@ -1,6 +1,8 @@
 package com.example.order_service.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.example.order_service.OrderNotificationSender;
@@ -15,16 +17,23 @@ import org.mockito.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public class OrderServiceTest {
 
-    @Mock private OrderRepository orderRepository;
-    @Mock private ProductClient productClient;
-    @Mock private OrderNotificationSender orderNotificationSender;
+    @Mock
+    private OrderRepository orderRepository;
+    @Mock
+    private ProductClient productClient;
+    @Mock
+    private OrderNotificationSender orderNotificationSender;
+    @Mock
+    private OrderLogService orderLogService;
 
-    @InjectMocks private OrderService orderService;
+    @InjectMocks
+    private OrderService orderService;
 
     @BeforeEach
     void setUp() {
@@ -48,6 +57,7 @@ public class OrderServiceTest {
         assertEquals(BigDecimal.valueOf(20), result.getTotalAmount());
         verify(productClient).decrementProductQuantities(any());
         verify(orderNotificationSender).sendOrderNotification(any());
+        verify(orderLogService).logOrderCreated(result.getId(), result.getTotalAmount(), result.getCreatedAt());
     }
 
     @Test
