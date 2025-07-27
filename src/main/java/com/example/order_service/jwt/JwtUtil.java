@@ -33,4 +33,20 @@ public class JwtUtil {
     public boolean isTokenExpired(String token) {
         return extractAllClaims(token).getExpiration().before(new Date());
     }
+
+    public Long extractUserId(String token) {
+        Object id = extractAllClaims(token).get("userId");
+        if (id instanceof Integer) {
+            return ((Integer) id).longValue();
+        } else if (id instanceof Long) {
+            return (Long) id;
+        } else if (id instanceof String) {
+            try {
+                return Long.parseLong((String) id);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
 }
