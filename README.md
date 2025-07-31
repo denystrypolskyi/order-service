@@ -23,8 +23,6 @@ This microservice manages orders. It allows creating, retrieving, and deleting o
 ## 🔐 Security
 
 - All endpoints require authentication via a custom `@Authenticated` annotation.  
-- User identity and email are retrieved from `UserContext`.  
-- Only the user who created an order can delete it.
 
 ## 📦 Tech Stack
 
