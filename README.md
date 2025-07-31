@@ -22,7 +22,8 @@ This microservice manages orders. It allows creating, retrieving, and deleting o
 
 ## 🔐 Security
 
-- All endpoints require authentication via a custom `@Authenticated` annotation.  
+- All endpoints require authentication via a custom `@Authenticated` annotation.
+- In production, role-based access control would be added to restrict sensitive operations.
 
 ## 📦 Tech Stack
 
