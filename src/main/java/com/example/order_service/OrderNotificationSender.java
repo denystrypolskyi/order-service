@@ -16,9 +16,7 @@ public class OrderNotificationSender {
 
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
-
-   
-
+ 
     public void sendOrderNotification(@Valid OrderNotificationDTO notification) {
         try {
             String json = objectMapper.writeValueAsString(notification);
