@@ -37,9 +37,9 @@ public class OrderService {
     @Transactional
     public void deleteOrder(Long orderId, Long userId) {
         Order order = repository.findById(orderId)
-                .orElseThrow(() -> new Error("Order not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         if (!order.getUserId().equals(userId)) {
-            throw new Error("You are not allowed to delete this order");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to delete this order");
         }
         repository.delete(order);
     }
