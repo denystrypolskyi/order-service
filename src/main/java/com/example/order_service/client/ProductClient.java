@@ -1,5 +1,6 @@
 package com.example.order_service.client;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import com.example.order_service.dto.ProductDTO;
 import com.example.order_service.dto.ProductDecrementRequest;
@@ -26,7 +29,10 @@ public class ProductClient {
     private String productServiceUrl;
 
     public ProductClient(RestTemplateBuilder builder) {
-        this.restTemplate = builder.build();
+        this.restTemplate = builder
+                .connectTimeout(Duration.ofSeconds(3))
+                .readTimeout(Duration.ofSeconds(5))
+                .build();
     }
 
     public Optional<ProductDTO> getProductById(Long productId) {
@@ -55,7 +61,8 @@ public class ProductClient {
                     Void.class);
 
         } catch (RestClientException e) {
-            throw new RuntimeException("Failed to decrement product quantities", e);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Failed to decrement product quantities", e);
         }
     }
 }

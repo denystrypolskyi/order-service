@@ -1,17 +1,16 @@
 # Order Service
 
-This microservice manages orders. It allows creating, retrieving, and deleting orders. It also integrates with the Product Service to verify stock and decrement product quantities, and sends order notifications via RabbitMQ. Order-related and product-related events are logged to Kafka.
+This microservice manages orders. It allows creating, retrieving, and deleting orders. It also integrates with the Product Service to verify stock and decrement product quantities, and sends order notifications via RabbitMQ.
 
-## 🚀 Features
+## Features
 
 - Get all orders  
 - Get orders by the current authenticated user  
 - Create a new order (validates product availability, decrements stock)  
 - Delete an order (only by the owner)  
 - Sends order notifications via RabbitMQ  
-- Logs order and product events to Kafka  
 
-## 📍 Endpoints
+## Endpoints
 
 | HTTP Method | Endpoint         | Description                      | Authentication Required |
 |-------------|------------------|--------------------------------|------------------------|
@@ -20,17 +19,17 @@ This microservice manages orders. It allows creating, retrieving, and deleting o
 | POST        | `/orders`        | Create a new order              | Yes                    |
 | DELETE      | `/orders/{orderId}` | Delete an order by ID          | Yes                    |
 
-## 🔐 Security
+## Security
 
-- All endpoints require authentication via a custom `@Authenticated` annotation.
-- In production, role-based access control would be added to restrict sensitive operations.
+- All `/orders/**` endpoints require a valid JWT bearer token.
+- The authenticated user ID is read from the token, not trusted from the request body.
 
-## 📦 Tech Stack
+## Tech Stack
 
-- Java 24  
+- Java 21
 - Spring Boot  
 - Jakarta Validation  
 - RabbitMQ (spring-amqp)  
-- Kafka  
 - Lombok  
 - PostgreSQL  
+- Flyway

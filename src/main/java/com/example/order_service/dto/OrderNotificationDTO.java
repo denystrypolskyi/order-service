@@ -1,6 +1,5 @@
 package com.example.order_service.dto;
 
-import com.example.order_service.model.Order;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,5 +17,5 @@ public class OrderNotificationDTO {
     private String email;
 
     @NotNull(message = "Order must not be null")
-    private Order order;
+    private OrderResponseDTO order;
 }

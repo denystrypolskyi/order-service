@@ -3,6 +3,7 @@ package com.example.order_service.jwt;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -11,8 +12,11 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET = "supersecuresecretkeyofatleast32bytes";
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final Key key;
+
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
     public Claims extractAllClaims(String token) {
         return Jwts.parser()

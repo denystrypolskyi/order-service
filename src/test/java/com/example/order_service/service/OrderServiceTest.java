@@ -2,7 +2,6 @@ package com.example.order_service.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.example.order_service.OrderNotificationSender;
@@ -17,7 +16,6 @@ import org.mockito.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,8 +27,6 @@ public class OrderServiceTest {
     private ProductClient productClient;
     @Mock
     private OrderNotificationSender orderNotificationSender;
-    @Mock
-    private OrderLogService orderLogService;
 
     @InjectMocks
     private OrderService orderService;
@@ -43,7 +39,6 @@ public class OrderServiceTest {
     @Test
     void testCreateOrder_success() {
         OrderCreateDTO dto = new OrderCreateDTO();
-        dto.setUserId(1L);
         OrderItemDTO item = new OrderItemDTO(100L, 2);
         dto.setItems(List.of(item));
 
@@ -51,19 +46,18 @@ public class OrderServiceTest {
         when(productClient.getProductById(100L)).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Order result = orderService.createOrder(dto, "test@example.com");
+        Order result = orderService.createOrder(dto, 1L, "test@example.com");
 
         assertNotNull(result);
+        assertEquals(1L, result.getUserId());
         assertEquals(BigDecimal.valueOf(20), result.getTotalAmount());
         verify(productClient).decrementProductQuantities(any());
         verify(orderNotificationSender).sendOrderNotification(any());
-        verify(orderLogService).logOrderCreated(result.getId(), result.getTotalAmount(), result.getCreatedAt());
     }
 
     @Test
     void testCreateOrder_notEnoughStock_throwsException() {
         OrderCreateDTO dto = new OrderCreateDTO();
-        dto.setUserId(1L);
         OrderItemDTO item = new OrderItemDTO(100L, 5);
         dto.setItems(List.of(item));
 
@@ -71,7 +65,7 @@ public class OrderServiceTest {
         when(productClient.getProductById(100L)).thenReturn(Optional.of(product));
 
         assertThrows(ResponseStatusException.class, () -> {
-            orderService.createOrder(dto, "test@example.com");
+            orderService.createOrder(dto, 1L, "test@example.com");
         });
     }
 
