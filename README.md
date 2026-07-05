@@ -1,35 +1,61 @@
 # Order Service
 
-This microservice manages orders. It allows creating, retrieving, and deleting orders. It also integrates with the Product Service to verify stock and decrement product quantities, and sends order notifications via RabbitMQ.
-
-## Features
-
-- Get all orders  
-- Get orders by the current authenticated user  
-- Create a new order (validates product availability, decrements stock)  
-- Delete an order (only by the owner)  
-- Sends order notifications via RabbitMQ  
-
-## Endpoints
-
-| HTTP Method | Endpoint         | Description                      | Authentication Required |
-|-------------|------------------|--------------------------------|------------------------|
-| GET         | `/orders`        | Get all orders                  | Yes                    |
-| GET         | `/orders/my`     | Get orders of the current user | Yes                    |
-| POST        | `/orders`        | Create a new order              | Yes                    |
-| DELETE      | `/orders/{orderId}` | Delete an order by ID          | Yes                    |
-
-## Security
-
-- All `/orders/**` endpoints require a valid JWT bearer token.
-- The authenticated user ID is read from the token, not trusted from the request body.
+Order service for the distributed backend system. It creates orders, validates product availability through the Product Service, decrements stock, and publishes order notifications to RabbitMQ.
 
 ## Tech Stack
 
 - Java 21
-- Spring Boot  
-- Jakarta Validation  
-- RabbitMQ (spring-amqp)  
-- Lombok  
-- PostgreSQL  
+- Spring Boot
+- Spring Web
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
 - Flyway
+- RabbitMQ
+- Bean Validation
+- JUnit, Mockito, MockMvc
+
+## API
+
+| Method | Endpoint | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/orders` | Yes | List all orders |
+| `GET` | `/orders/my` | Yes | List orders for the authenticated user |
+| `POST` | `/orders` | Yes | Create a new order |
+| `DELETE` | `/orders/{orderId}` | Yes | Delete an order owned by the authenticated user |
+
+### Create Order Request
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    }
+  ]
+}
+```
+
+## Messaging
+
+When an order is created, the service publishes a message to RabbitMQ queue:
+
+```text
+order.notifications
+```
+
+The Notification Service consumes this message and sends the email notification.
+
+## Notes
+
+- All endpoints require a valid JWT bearer token.
+- The user ID is read from the JWT, not from the request body.
+- Calls to the Product Service use HTTP timeouts.
+- API errors are returned through a centralized exception handler.
+
+## Run Tests
+
+```powershell
+.\mvnw.cmd test
+```
