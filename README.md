@@ -49,10 +49,8 @@ The Notification Service consumes this message and sends the email notification.
 
 ## Notes
 
-- All endpoints require a valid JWT bearer token.
-- The user ID is read from the JWT, not from the request body.
-- Calls to the Product Service use HTTP timeouts.
-- API errors are returned through a centralized exception handler.
+- Order creation reserves product stock through the Product Service.
+- External Product Service calls have explicit connection and read timeouts.
 
 ## Run Tests
 
