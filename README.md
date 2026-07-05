@@ -1,6 +1,6 @@
 # Order Service
 
-Order service for the distributed backend system. It creates orders, validates product availability through the Product Service, decrements stock, and publishes order notifications to RabbitMQ.
+Order service for the e-commerce backend. It creates orders, validates product availability through the Product Service, decrements stock, and publishes order notifications to RabbitMQ.
 
 ## Tech Stack
 
